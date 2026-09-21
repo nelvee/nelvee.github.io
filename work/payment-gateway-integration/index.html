@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Payment gateway layer — C# / .NET case study | elvee</title>
+<meta name="description" content="Every provider models a deposit differently, and all of them fail differently. Product teams should not have to care which one is behind a transaction.…">
+<link rel="canonical" href="https://nelvee.github.io/work/payment-gateway-integration/">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#07090C">
+<meta name="author" content="elvee">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="elvee">
+<meta property="og:title" content="Payment gateway layer — C# / .NET case study | elvee">
+<meta property="og:description" content="Every provider models a deposit differently, and all of them fail differently. Product teams should not have to care which one is behind a transaction.…">
+<meta property="og:url" content="https://nelvee.github.io/work/payment-gateway-integration/">
+<meta property="og:image" content="https://nelvee.github.io/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_PH">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Payment gateway layer — C# / .NET case study | elvee">
+<meta name="twitter:description" content="Every provider models a deposit differently, and all of them fail differently. Product teams should not have to care which one is behind a transaction.…">
+<meta name="twitter:image" content="https://nelvee.github.io/og-image.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  "name": "Payment gateway layer",
+  "headline": "Payment gateway layer",
+  "description": "Every provider models a deposit differently, and all of them fail differently. Product teams should not have to care which one is behind a transaction.",
+  "url": "https://nelvee.github.io/work/payment-gateway-integration/",
+  "about": [
+    "C#",
+    ".NET",
+    "SQL Server",
+    "Serilog"
+  ],
+  "dateCreated": "2020",
+  "author": {
+    "@type": "Person",
+    "name": "elvee",
+    "url": "https://nelvee.github.io/"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "elvee",
+    "url": "https://nelvee.github.io/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://nelvee.github.io/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Work",
+      "item": "https://nelvee.github.io/#work"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Payment gateway layer",
+      "item": "https://nelvee.github.io/work/payment-gateway-integration/"
+    }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Source+Sans+3:wght@300;400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* Deliberately single-theme: this page commits to one dark world,
+     so every colour is painted explicitly rather than inherited. */
+  :root {
+    --ground:   #07090C;
+    --ground-2: #0A0E13;
+    --surface:  #0F161D;
+    --raised:   #131C25;
+    --line:     #1C2831;
+    --line-2:   #26333D;
+    --ink:      #F1F6F7;
+    --body:     #93A5AD;
+    --muted:    #63757E;
+    --accent:   #3FBFAE;
+    --accent-d: #1E8377;
+    --accent-w: rgba(63, 191, 174, 0.09);
+    --violet:   #2A3566;
+
+    --display: "Saira Condensed", "Arial Narrow", sans-serif;
+    --sans: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 60ch;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--body);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 22px; }
+
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  h1, h2, h3 { margin: 0; color: var(--ink); }
+
+  /* ---------------- Nav ---------------- */
+
+  .nav {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 40;
+    background: rgba(7, 9, 12, 0.88);
+    backdrop-filter: blur(11px);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-in {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 13px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+  .mark {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.22rem;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .mark span {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .nav-links { display: flex; gap: 26px; }
+  .nav-links a {
+    font-size: 0.88rem;
+    color: var(--body);
+    text-decoration: none;
+    transition: color .15s ease;
+  }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ---------------- Hero ---------------- */
+
+  .hero {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(120% 82% at 72% 8%, rgba(42, 53, 102, 0.42) 0%, transparent 62%),
+      radial-gradient(90% 60% at 12% 96%, rgba(30, 131, 119, 0.16) 0%, transparent 70%),
+      var(--ground);
+  }
+
+  .hero-type {
+    padding-top: 54px;
+    line-height: 0.84;
+  }
+  .hero-word {
+    display: inline-block;
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(1.9rem, 7.6vw, 7rem);
+    line-height: 0.84;
+    white-space: nowrap;
+    letter-spacing: -0.022em;
+    text-transform: uppercase;
+    background: linear-gradient(97deg, #2F6E92 0%, #3FBFAE 34%, #62CBE6 50%, #3FBFAE 66%, #2F6E92 100%);
+    background-size: 200% 100%;
+    animation: shimmer 11s linear infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-mask-image: radial-gradient(circle at center, #000 41%, transparent 43%);
+    mask-image: radial-gradient(circle at center, #000 41%, transparent 43%);
+    -webkit-mask-size: 6px 6px;
+    mask-size: 6px 6px;
+    user-select: none;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.78fr) minmax(0, 0.62fr);
+    gap: 40px;
+    align-items: end;
+    padding-block: 34px 30px;
+  }
+
+  .greet {
+    font-family: var(--display);
+    font-weight: 600;
+    font-style: italic;
+    font-size: 1.3rem;
+    color: var(--body);
+    letter-spacing: 0.01em;
+  }
+  .hero-name {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.4rem, 5.4vw, 3.5rem);
+    line-height: 0.96;
+    letter-spacing: -0.015em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+  .hero-role {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 13px;
+  }
+  .hero-blurb { margin-top: 15px; max-width: 40ch; font-size: 0.98rem; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 24px; }
+  .btn {
+    font-family: var(--sans);
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 10px 19px;
+    border-radius: 2px;
+    text-decoration: none;
+    border: 1px solid transparent;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .btn-solid { background: var(--accent); color: #04211E; }
+  .btn-solid:hover { background: #55D3C2; }
+  .btn-ghost { border-color: var(--line-2); color: var(--ink); }
+  .btn-ico { display: inline-flex; align-items: center; gap: 8px; }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* portrait column */
+  .portrait { align-self: end; }
+  .portrait img { display: block; width: 100%; height: auto; }
+  .portrait .sysgraph { display: block; width: 100%; height: auto; }
+
+  .pillars { display: flex; flex-direction: column; gap: 22px; }
+  .pillar-k {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.42rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.005em;
+    line-height: 1.1;
+  }
+  .pillar-v { font-size: 0.86rem; color: var(--muted); margin-top: 2px; }
+
+  .hero-foot {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-block: 15px;
+    border-top: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ---------------- Tech strip ---------------- */
+
+  .strip { border-bottom: 1px solid var(--line); background: var(--ground-2); }
+  .marquee { padding-block: 22px; }
+
+  /* ---------------- Sections ---------------- */
+
+  .sec { padding-block: 84px; border-bottom: 1px solid var(--line); }
+  .sec:last-of-type { border-bottom: 0; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.19em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .eyebrow b { color: var(--muted); font-weight: 400; }
+
+  .sec-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+    gap: 40px;
+    align-items: end;
+    margin-bottom: 44px;
+  }
+  .headline {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.1rem, 5.2vw, 3.5rem);
+    line-height: 0.98;
+    letter-spacing: -0.017em;
+    text-transform: uppercase;
+  }
+  .headline .hl { color: var(--accent); display: block; }
+  .sec-note { font-size: 0.95rem; max-width: 46ch; }
+
+  /* Keyword-bearing line under each display headline. */
+  .sub {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-top: 12px;
+    max-width: 62ch;
+    line-height: 1.7;
+  }
+  .sub b { color: var(--body); font-weight: 500; }
+
+  /* ---------------- FAQ ---------------- */
+
+  .faq { display: grid; gap: 0; }
+  .faq-item { border-top: 1px solid var(--line); padding-block: 22px; }
+  .faq-item:last-child { border-bottom: 1px solid var(--line); }
+  .faq-q {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.16rem;
+    text-transform: uppercase;
+    color: var(--ink);
+    letter-spacing: -0.004em;
+    margin-bottom: 7px;
+  }
+  .faq-a { font-size: 0.95rem; max-width: 76ch; }
+  .faq-a b { color: var(--ink); font-weight: 600; }
+
+  .case-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 14px;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--accent-d);
+    padding-bottom: 2px;
+    align-self: flex-start;
+  }
+  .case-link:hover { color: var(--ink); border-color: var(--ink); }
+
+  /* ---------------- Work cards ---------------- */
+
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: border-color .16s ease;
+  }
+  .card:hover { border-color: var(--line-2); }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 17px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .card-num { color: var(--accent); font-weight: 500; }
+  .card-cat { color: var(--muted); flex: 1; }
+  .badge {
+    border: 1px solid var(--line-2);
+    border-radius: 2px;
+    padding: 2px 8px;
+    color: var(--body);
+    white-space: nowrap;
+  }
+  .badge.prod { border-color: var(--accent-d); color: var(--accent); }
+
+  .card-media { border-bottom: 1px solid var(--line); background: var(--ground-2); }
+  .card-media img { display: block; width: 100%; height: auto; }
+  .card-media .diagram { display: block; width: 100%; height: auto; background: var(--ground-2); }
+  .media-slot {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 5px;
+    padding: 20px;
+    background:
+      repeating-linear-gradient(-45deg, transparent, transparent 10px,
+        rgba(255,255,255,0.015) 10px, rgba(255,255,255,0.015) 11px);
+  }
+
+  .card-body { padding: 18px 17px 19px; display: flex; flex-direction: column; flex: 1; }
+  .card-title {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.36rem;
+    line-height: 1.1;
+    text-transform: uppercase;
+    letter-spacing: -0.005em;
+  }
+  .card-desc { margin-top: 9px; font-size: 0.93rem; }
+  .card-stack {
+    margin-top: 13px;
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    color: var(--accent);
+    letter-spacing: 0.03em;
+  }
+
+  details.more { margin-top: auto; border-top: 1px solid var(--line); padding-top: 13px; }
+  details.more > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--body);
+  }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::after { content: "+"; color: var(--accent); font-size: 1rem; }
+  details.more[open] > summary::after { content: "–"; }
+  details.more ul { margin: 12px 0 0; padding: 0; list-style: none; }
+  details.more li {
+    position: relative;
+    padding-left: 16px;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+  }
+  details.more li::before {
+    content: "";
+    position: absolute;
+    left: 1px;
+    top: 0.62em;
+    width: 5px;
+    height: 5px;
+    background: var(--accent-d);
+  }
+  .card-links { display: flex; gap: 8px; margin-top: 13px; flex-wrap: wrap; }
+  .card-links a {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--line-2);
+    border-radius: 2px;
+    padding: 4px 10px;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .card-links a:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ---------------- Slots ---------------- */
+
+  .slot-title { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.11em;
+                text-transform: uppercase; color: var(--body); }
+  .slot-hint { font-size: 0.8rem; color: var(--muted); line-height: 1.5; max-width: 44ch; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    background: var(--raised);
+    color: var(--accent);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  /* ---------------- Experience ---------------- */
+
+  .xp { border-top: 1px solid var(--line); }
+  .xp-row {
+    display: grid;
+    grid-template-columns: 148px minmax(0, 1fr) minmax(0, 1.15fr);
+    gap: 26px;
+    padding-block: 20px;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .xp-when {
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .xp-role {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.16rem;
+    text-transform: uppercase;
+    color: var(--ink);
+    line-height: 1.14;
+  }
+  .xp-org { font-size: 0.86rem; color: var(--accent); margin-top: 2px; }
+  .xp-note { font-size: 0.92rem; }
+
+  /* ---------------- Stack ---------------- */
+
+  .stack-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 44px; }
+  .stack-row { padding-block: 15px; border-top: 1px solid var(--line); }
+  .stack-k {
+    font-family: var(--mono);
+    font-size: 0.71rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 5px;
+  }
+  .stack-v { font-size: 0.92rem; }
+
+  /* ---------------- Process ---------------- */
+
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 34px; }
+  .step { border-top: 1px solid var(--line-2); padding-top: 15px; }
+  .step-n {
+    font-family: var(--mono);
+    font-size: 0.73rem;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    margin-bottom: 7px;
+  }
+  .step h3 { font-size: 1.04rem; font-weight: 600; margin-bottom: 5px; }
+  .step p { margin: 0; font-size: 0.91rem; }
+
+  /* ---------------- Contact ---------------- */
+
+  .contact {
+    background:
+      radial-gradient(90% 130% at 82% 0%, rgba(42, 53, 102, 0.4) 0%, transparent 66%),
+      var(--ground-2);
+    border-top: 1px solid var(--line);
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-block: 22px 46px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  footer a { color: var(--body); text-decoration: none; }
+  footer a:hover { color: var(--accent); }
+
+  /* ---------------- Setup panel ---------------- */
+
+  .setup {
+    border: 1px dashed var(--accent-d);
+    border-radius: 3px;
+    background: var(--accent-w);
+    padding: 22px 24px;
+    margin-block: 44px 0;
+  }
+  .setup-top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+  .setup h2 { font-family: var(--display); font-weight: 700; font-size: 1.24rem; text-transform: uppercase; }
+  .setup p { margin: 9px 0 0; font-size: 0.92rem; max-width: var(--measure); }
+  .setup ol { margin: 11px 0 0; padding-left: 20px; font-size: 0.89rem; }
+  .setup li { margin-bottom: 4px; }
+  .setup button {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--accent-d);
+    color: var(--accent);
+    padding: 5px 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  /* ---------------- Narrow ---------------- */
+
+  @media (max-width: 960px) {
+    .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 0.66fr); }
+    .pillars { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; gap: 26px; }
+    .sec-head { grid-template-columns: 1fr; gap: 18px; }
+    .cards { grid-template-columns: 1fr; }
+    .stack-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; gap: 24px; }
+    .xp-row { grid-template-columns: 120px minmax(0, 1fr); }
+    .xp-note { grid-column: 2; }
+  }
+
+  @media (max-width: 620px) {
+    .mark span { display: none; }
+    .nav-links { gap: 15px; }
+    .nav-links a { font-size: 0.8rem; }
+    .nav-in { padding: 11px 16px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 28px; align-items: start; }
+    .portrait { max-width: 230px; }
+    .xp-row { grid-template-columns: 1fr; gap: 5px; }
+    .xp-note { grid-column: 1; }
+    .sec { padding-block: 58px; }
+    .hero-type { padding-top: 34px; }
+  }
+
+
+  /* ---------------- Motion ---------------- */
+
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+  @keyframes shimmer {
+    to { background-position: 200% 50%; }
+  }
+  @keyframes slideTrack {
+    to { transform: translateX(-50%); }
+  }
+  @keyframes sweepIn {
+    from { clip-path: inset(0 100% 0 0); }
+    to   { clip-path: inset(0 0 0 0); }
+  }
+
+  .hero-type { animation: sweepIn 1.05s cubic-bezier(.22,.7,.25,1) both; }
+  .hero-grid > *  { animation: riseIn .72s cubic-bezier(.2,.7,.3,1) both; }
+  .hero-grid > *:nth-child(1) { animation-delay: .30s; }
+  .hero-grid > *:nth-child(2) { animation-delay: .42s; }
+  .hero-grid > *:nth-child(3) { animation-delay: .52s; }
+  .hero-foot { animation: riseIn .7s ease both .62s; }
+
+  /* Pointer-tracked glow over the hero */
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(380px circle at var(--mx, 70%) var(--my, 26%),
+                rgba(63, 191, 174, 0.13), transparent 68%);
+    opacity: 0;
+    transition: opacity .4s ease;
+  }
+  .hero:hover::before { opacity: 1; }
+  .hero > .wrap { position: relative; z-index: 1; }
+
+  /* Scroll progress in the nav */
+  .progress {
+    position: absolute;
+    left: 0; bottom: -1px;
+    height: 2px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent-d), var(--accent));
+    transition: width .1s linear;
+  }
+
+  /* ---------------- Icons ---------------- */
+
+  .ico { display: block; width: 100%; height: 100%; }
+  .ico-box {
+    width: 26px; height: 26px;
+    flex: 0 0 26px;
+    display: grid; place-items: center;
+  }
+
+  /* ---------------- Tech marquee ---------------- */
+
+  .marquee {
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    gap: 11px;
+    animation: slideTrack 38s linear infinite;
+  }
+  .marquee:hover .marquee-track,
+  .marquee:focus-within .marquee-track { animation-play-state: paused; }
+
+  .tech {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    color: var(--body);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 8px 14px 8px 10px;
+    background: var(--surface);
+    white-space: nowrap;
+    transition: border-color .18s ease, color .18s ease, transform .18s ease;
+  }
+  .tech:hover { border-color: var(--line-2); color: var(--ink); transform: translateY(-2px); }
+
+  /* ---------------- Stat band ---------------- */
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border-block: 1px solid var(--line);
+  }
+  .stat { background: var(--ground); padding: 30px 24px; }
+  .stat-n {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: clamp(2.6rem, 6.4vw, 4.2rem);
+    line-height: 0.92;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .stat-l {
+    font-family: var(--mono);
+    font-size: 0.71rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  /* ---------------- Card motion ---------------- */
+
+  .card {
+    transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+  }
+  .card:hover {
+    border-color: var(--accent-d);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .45), 0 0 0 1px rgba(63, 191, 174, .12);
+  }
+  .card:hover .card-num { color: var(--ink); }
+  .card-num { transition: color .2s ease; }
+
+  .card-icons { display: flex; gap: 7px; margin-top: 13px; flex-wrap: wrap; align-items: center; }
+  .card-icons .ico-box { width: 21px; height: 21px; flex-basis: 21px; opacity: .82; transition: opacity .18s ease, transform .18s ease; }
+  .card:hover .card-icons .ico-box { opacity: 1; }
+  .card-icons .ico-box:hover { transform: translateY(-2px); }
+
+  .btn-solid { box-shadow: 0 0 0 0 rgba(63,191,174,.5); transition: background .15s ease, box-shadow .25s ease, transform .15s ease; }
+  .btn-solid:hover { box-shadow: 0 6px 26px rgba(63,191,174,.32); transform: translateY(-2px); }
+  .btn-ghost { transition: border-color .15s ease, color .15s ease, transform .15s ease; }
+  .btn-ghost:hover { transform: translateY(-2px); }
+
+  .pillar-k { transition: transform .18s ease; }
+  .pillars > div:hover .pillar-k { transform: translateX(3px); }
+
+  @media (max-width: 620px) {
+    .stats { grid-template-columns: 1fr; }
+    .stat { padding: 22px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition: none !important;
+      animation: none !important;
+    }
+    .hero-type, .hero-grid > *, .hero-foot { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+    .marquee-track { transform: none !important; }
+    .hero::before { display: none; }
+  }
+
+  .case-grid {
+    margin-top: 38px; display: grid; gap: 34px;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  }
+  @media (max-width: 760px) { .case-grid { grid-template-columns: 1fr; } }
+
+  .field-label {
+    font-family: var(--mono); font-size: 0.71rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+  }
+  .built { margin: 0; padding: 0; list-style: none; }
+  .built li { position: relative; padding-left: 18px; margin-bottom: 8px; }
+  .built li::before {
+    content: ""; position: absolute; left: 1px; top: 0.62em;
+    width: 5px; height: 5px; background: var(--accent-d);
+  }
+  .stack { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-family: var(--mono); font-size: 0.73rem; padding: 4px 10px;
+    border-radius: 2px; background: var(--surface); border: 1px solid var(--line);
+    color: var(--body); white-space: nowrap;
+  }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; }
+  .link-btn {
+    font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.08em;
+    text-transform: uppercase; border: 1px solid var(--line-2); border-radius: 2px;
+    padding: 7px 12px; color: var(--ink); text-decoration: none;
+    transition: border-color .15s ease, color .15s ease;
+  }
+  .link-btn:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+<script>window.__PUBLISHED__ = true;</script>
+
+<nav class="nav">
+  <div class="progress" id="progress" style="width: 0%;"></div>
+  <div class="nav-in">
+    <a class="mark" href="#top">elvee <span id="mark-role">Senior .NET Developer — Philippines</span></a>
+    <div class="nav-links">
+      <a href="#work">Work</a>
+      <a href="#background">Background</a>
+      <a href="#stack">Stack</a>
+      <a href="#faq">FAQ</a>
+      <a href="#contact">Contact</a>
+    </div>
+  </div>
+</nav>
+<main>
+  <article class="sec" style="padding-block:54px 70px;border-bottom:0">
+    <div class="wrap">
+      <div class="eyebrow"><a href="/" style="color:var(--muted);text-decoration:none">Home</a>
+        <b>/</b> <a href="/#work" style="color:var(--muted);text-decoration:none">Work</a>
+        <b>/</b> Payments</div>
+
+      <h1 class="headline" style="max-width:20ch">Payment gateway layer</h1>
+      <p class="sub"><b>FYB Technologies · independent clients</b> &nbsp;&middot;&nbsp; 2020
+         &nbsp;&middot;&nbsp; Production</p>
+
+      <div style="margin-top:34px;border:1px solid var(--line);border-radius:3px;
+                  background:var(--ground-2);overflow:hidden"><svg class="diagram" viewBox="0 0 640 262" role="img" aria-label="One contract, many providers"><line x1="170" y1="128.5" x2="170" y2="177.5" stroke="var(--line-2)" stroke-width="1"></line><line x1="157" y1="128.5" x2="170" y2="128.5" stroke="var(--line-2)" stroke-width="1"></line><line x1="157" y1="177.5" x2="170" y2="177.5" stroke="var(--line-2)" stroke-width="1"></line><line x1="170" y1="128.5" x2="177" y2="128.5" stroke="var(--line-2)" stroke-width="1"></line><path d="M177 125.3 L183 128.5 L177 131.7 Z" fill="var(--accent-d)"></path><line x1="170" y1="177.5" x2="177" y2="177.5" stroke="var(--line-2)" stroke-width="1"></line><path d="M177 174.3 L183 177.5 L177 180.7 Z" fill="var(--accent-d)"></path><line x1="320" y1="104" x2="320" y2="202" stroke="var(--line-2)" stroke-width="1"></line><line x1="307" y1="128.5" x2="320" y2="128.5" stroke="var(--line-2)" stroke-width="1"></line><line x1="307" y1="177.5" x2="320" y2="177.5" stroke="var(--line-2)" stroke-width="1"></line><line x1="320" y1="104" x2="327" y2="104" stroke="var(--line-2)" stroke-width="1"></line><path d="M327 100.8 L333 104 L327 107.2 Z" fill="var(--accent-d)"></path><line x1="320" y1="153" x2="327" y2="153" stroke="var(--line-2)" stroke-width="1"></line><path d="M327 149.8 L333 153 L327 156.2 Z" fill="var(--accent-d)"></path><line x1="320" y1="202" x2="327" y2="202" stroke="var(--line-2)" stroke-width="1"></line><path d="M327 198.8 L333 202 L327 205.2 Z" fill="var(--accent-d)"></path><line x1="470" y1="104" x2="470" y2="202" stroke="var(--line-2)" stroke-width="1"></line><line x1="457" y1="104" x2="470" y2="104" stroke="var(--line-2)" stroke-width="1"></line><line x1="457" y1="153" x2="470" y2="153" stroke="var(--line-2)" stroke-width="1"></line><line x1="457" y1="202" x2="470" y2="202" stroke="var(--line-2)" stroke-width="1"></line><line x1="470" y1="153" x2="477" y2="153" stroke="var(--line-2)" stroke-width="1"></line><path d="M477 149.8 L483 153 L477 156.2 Z" fill="var(--accent-d)"></path><text x="95" y="44" text-anchor="middle" fill="var(--muted)" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.6">CALLERS</text><text x="245" y="44" text-anchor="middle" fill="var(--muted)" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.6">LAYER</text><text x="395" y="44" text-anchor="middle" fill="var(--muted)" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.6">PROVIDERS</text><text x="545" y="44" text-anchor="middle" fill="var(--muted)" font-family="IBM Plex Mono, monospace" font-size="9" letter-spacing="1.6">LEDGER</text><rect x="33" y="109.5" width="124" height="38" rx="2" fill="var(--raised)" stroke="var(--line-2)" stroke-width="1"></rect><text x="95" y="132.5" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="10">Deposit flow</text><rect x="33" y="158.5" width="124" height="38" rx="2" fill="var(--raised)" stroke="var(--line-2)" stroke-width="1"></rect><text x="95" y="181.5" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="10">Back office</text><rect x="183" y="109.5" width="124" height="38" rx="2" fill="var(--accent-w)" stroke="var(--accent-d)" stroke-width="1"></rect><text x="245" y="126.5" text-anchor="middle" fill="var(--accent)" font-family="IBM Plex Mono, monospace" font-size="10">Gateway</text><text x="245" y="137.5" text-anchor="middle" fill="var(--accent)" font-family="IBM Plex Mono, monospace" font-size="10">contract</text><rect x="183" y="158.5" width="124" height="38" rx="2" fill="var(--accent-w)" stroke="var(--accent-d)" stroke-width="1"></rect><text x="245" y="181.5" text-anchor="middle" fill="var(--accent)" font-family="IBM Plex Mono, monospace" font-size="10">Retry / Polly</text><rect x="333" y="85" width="124" height="38" rx="2" fill="var(--raised)" stroke="var(--line-2)" stroke-width="1"></rect><text x="395" y="108" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="10">Card</text><rect x="333" y="134" width="124" height="38" rx="2" fill="var(--raised)" stroke="var(--line-2)" stroke-width="1"></rect><text x="395" y="157" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="10">Bank transfer</text><rect x="333" y="183" width="124" height="38" rx="2" fill="var(--raised)" stroke="var(--line-2)" stroke-width="1"></rect><text x="395" y="206" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="10">Crypto</text><rect x="483" y="134" width="124" height="38" rx="2" fill="var(--raised)" stroke="var(--line-2)" stroke-width="1"></rect><text x="545" y="157" text-anchor="middle" fill="var(--ink)" font-family="IBM Plex Mono, monospace" font-size="10">Reconciliation</text><text x="20" y="22" fill="var(--accent)" font-family="IBM Plex Mono, monospace" font-size="9.5" letter-spacing="1.4">ONE CONTRACT, MANY PROVIDERS</text></svg></div>
+
+      <div class="case-grid">
+        <div>
+          <div class="field-label">The problem</div>
+          <p style="margin:0 0 26px;max-width:66ch">Every provider models a deposit differently, and all of them fail differently. Product teams should not have to care which one is behind a transaction.</p>
+          <div class="field-label">What I built</div>
+          <ul class="built" style="max-width:66ch"><li>One internal contract across card, bank transfer and crypto deposit providers.</li><li>Settlement reconciliation against provider statements, surfacing mismatches rather than swallowing them.</li><li>Per-provider retry and failure handling, so one gateway outage degrades instead of blocking deposits.</li></ul>
+
+          <div class="field-label" style="margin-top:28px">How it works</div>
+          <p style="margin:0 0 15px;max-width:68ch">Payment providers agree on almost nothing. One returns a settled deposit synchronously, another acknowledges and settles by webhook minutes later, a third goes quiet and expects to be polled. Currencies, minimum amounts, fee models and error vocabularies all differ. Wire each provider straight into product code and those differences spread everywhere.</p><p style="margin:0 0 15px;max-width:68ch">The fix is one internal contract that product code speaks, with an adapter per provider behind it. A deposit means the same thing on every path; failure modes are normalised so callers handle a small, known set rather than each provider's dialect. Resilience policies with Polly govern retries and timeouts per provider, so a single gateway degrading does not take deposits down with it.</p><p style="margin:0 0 15px;max-width:68ch">Reconciliation runs against provider statements rather than trusting callbacks. Where the ledger and the provider disagree, the mismatch is surfaced for a human rather than quietly absorbed — in payments, a silent discrepancy is worse than a loud one.</p>
+        </div>
+        <aside>
+          <div class="field-label">Stack</div>
+          <div class="card-icons" style="margin-bottom:10px"><span class="ico-box" style="color:#9B4F96;width:21px;height:21px;flex-basis:21px" title="C#" role="img" aria-label="C#">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="currentColor"></rect>
+     <text x="12" y="16.6" text-anchor="middle" font-family="Arial,sans-serif" font-size="10.5" font-weight="700" fill="#fff">C#</text></svg>
+    </span><span class="ico-box" style="color:#512BD4;width:21px;height:21px;flex-basis:21px" title=".NET" role="img" aria-label=".NET">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="5" fill="currentColor"></rect>
+     <text x="12" y="15.8" text-anchor="middle" font-family="Arial,sans-serif" font-size="7.4" font-weight="700" fill="#fff">.NET</text></svg>
+    </span><span class="ico-box" style="color:#CC2927;width:21px;height:21px;flex-basis:21px" title="SQL Server" role="img" aria-label="SQL Server">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><ellipse cx="12" cy="5.6" rx="8.2" ry="3.3" fill="currentColor"></ellipse>
+     <path d="M3.8 5.6v12.8c0 1.8 3.7 3.3 8.2 3.3s8.2-1.5 8.2-3.3V5.6" fill="currentColor" opacity=".55"></path>
+     <ellipse cx="12" cy="12" rx="8.2" ry="3.3" fill="none" stroke="#fff" stroke-width="1.1" opacity=".5"></ellipse></svg>
+    </span><span class="ico-box" style="color:#5BA3D0;width:21px;height:21px;flex-basis:21px" title="Serilog" role="img" aria-label="Serilog">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5.6h16M4 10.4h16M4 15.2h11M4 20h7" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"></path></svg>
+    </span></div>
+          <div class="stack"><span class="chip">C#</span><span class="chip">.NET</span><span class="chip">SQL Server</span><span class="chip">Serilog</span></div>
+          <div class="field-label" style="margin-top:26px">Category</div>
+          <p style="margin:0">Payments</p>
+        </aside>
+      </div>
+
+      <div style="margin-top:46px;padding-top:26px;border-top:1px solid var(--line)">
+        <div class="field-label">Other work</div>
+        <div class="links" style="margin-top:12px"><a class="link-btn" href="/work/white-label-igaming-platform/">White-label iGaming platform</a><a class="link-btn" href="/work/game-provider-aggregator/">Game provider aggregator</a><a class="link-btn" href="/work/treasury-payment-automation/">Midas treasury automation</a><a class="link-btn" href="/work/bank-transaction-automation/">Bank automation &amp; SMS bridge</a><a class="link-btn" href="/work/banking-data-migration-reporting/">COIN banking tools &amp; PMR</a></div>
+      </div>
+
+      <div class="cta-row" style="margin-top:38px">
+        <a class="btn btn-solid" href="/#contact">Get in touch</a>
+        <a class="btn btn-ghost" href="/">Back to all work</a>
+      </div>
+    </div>
+  </article>
+</main>
+<div class="wrap"><footer>
+    <span id="foot-name">elvee — Senior .NET Developer — Philippines</span>
+    <span id="foot-links"><a href="mailto:lhunnel_008@yahoo.com.sg">Email</a> &nbsp;/&nbsp; <a href="https://www.linkedin.com/in/nhelv/" target="_blank" rel="noopener">LinkedIn</a> &nbsp;/&nbsp; <a href="https://www.upwork.com/freelancers/~0162137f23bc65f397" target="_blank" rel="noopener">Upwork</a> &nbsp;/&nbsp; <a href="https://github.com/nelvee" target="_blank" rel="noopener">GitHub</a></span>
+  </footer></div>
+</body>
+</html>
