@@ -352,6 +352,23 @@
   }
   .sub b { color: var(--body); font-weight: 500; }
 
+  /* ---------------- Services ---------------- */
+
+  .svc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 44px; }
+  .svc-item { padding-block: 19px; border-top: 1px solid var(--line); }
+  .svc-h {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    color: var(--ink);
+    letter-spacing: -0.004em;
+    line-height: 1.16;
+    margin-bottom: 5px;
+  }
+  .svc-p { font-size: 0.92rem; max-width: 52ch; }
+  @media (max-width: 860px) { .svc { grid-template-columns: 1fr; } }
+
   /* ---------------- FAQ ---------------- */
 
   .faq { display: grid; gap: 0; }
@@ -644,9 +661,19 @@
 
   @media (max-width: 620px) {
     .mark span { display: none; }
-    .nav-links { gap: 15px; }
-    .nav-links a { font-size: 0.8rem; }
-    .nav-in { padding: 11px 16px; }
+    .nav-in { padding: 11px 16px; gap: 12px; }
+    /* Six links no longer fit a small phone; let the row scroll rather
+       than push the whole page sideways. */
+    .nav-links {
+      gap: 14px;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-links a { font-size: 0.8rem; white-space: nowrap; }
+    .mark { flex: 0 0 auto; }
     .hero-grid { grid-template-columns: 1fr; gap: 28px; align-items: start; }
     .portrait { max-width: 230px; }
     .xp-row { grid-template-columns: 1fr; gap: 5px; }
@@ -855,6 +882,7 @@
   <div class="nav-in">
     <a class="mark" href="#top">elvee <span id="mark-role">Senior .NET Developer — Philippines</span></a>
     <div class="nav-links">
+      <a href="#services">Services</a>
       <a href="#work">Work</a>
       <a href="#background">Background</a>
       <a href="#stack">Stack</a>
@@ -923,7 +951,7 @@
 </main>
 <div class="wrap"><footer>
     <span id="foot-name">elvee — Senior .NET Developer — Philippines</span>
-    <span id="foot-links"><a href="mailto:lhunnel_008@yahoo.com.sg">Email</a> &nbsp;/&nbsp; <a href="https://www.linkedin.com/in/nhelv/" target="_blank" rel="noopener">LinkedIn</a> &nbsp;/&nbsp; <a href="https://www.upwork.com/freelancers/~0162137f23bc65f397" target="_blank" rel="noopener">Upwork</a> &nbsp;/&nbsp; <a href="https://github.com/nelvee" target="_blank" rel="noopener">GitHub</a></span>
+    <span id="foot-links"><a href="mailto:lhunnel008@gmail.com">lhunnel008@gmail.com</a> &nbsp;/&nbsp; <a href="https://www.linkedin.com/in/nhelv/" target="_blank" rel="noopener">LinkedIn</a> &nbsp;/&nbsp; <a href="https://www.upwork.com/freelancers/~0162137f23bc65f397" target="_blank" rel="noopener">Upwork</a> &nbsp;/&nbsp; <a href="https://github.com/nelvee" target="_blank" rel="noopener">GitHub</a></span>
   </footer></div>
 </body>
 </html>
